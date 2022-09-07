@@ -129,7 +129,7 @@ func speedMath(who string, conn net.Conn, winTable map[string]int) {
 			winTable[who]++
 			messages <- "Win table at the moment:"
 			for s, i := range winTable {
-				messages <- fmt.Sprintf("n[%s]: %d", s, i)
+				messages <- fmt.Sprintf("[%s]: %d", s, i)
 			}
 			expr, result = randomMathExpression()
 
