@@ -132,7 +132,9 @@ func speedMath(who string, conn net.Conn, winTable map[string]int) {
 				messages <- fmt.Sprintf("n[%s]: %d", s, i)
 			}
 			expr, result = randomMathExpression()
+
 			fmt.Println(expr, result)
+
 			go func() {
 				m.Lock()
 				expressions <- expr
