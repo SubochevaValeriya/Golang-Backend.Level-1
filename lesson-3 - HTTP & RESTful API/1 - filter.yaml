@@ -1,0 +1,33 @@
+/item?price_min={price_min}&price_max={price_max}:
+  get:
+    tags:
+      - item
+    summary: Find items filtered by price
+    description: Returns items filtered by price
+    operationId: getItemsFiltered
+    parameters:
+      - price_min: price_min
+        in: query
+        description: min price
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - price_max: price_max
+        in: path
+        description: max price
+        required: true
+        schema:
+          type: integer
+          format: int64
+    responses:
+      '200':
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Item'
+      '400':
+        description: Invalid ID supplied
+      '404':
+        description: Item not found

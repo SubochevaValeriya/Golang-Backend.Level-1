@@ -1,0 +1,25 @@
+Order:
+type: object
+properties:
+id:
+type: integer
+format: int64
+user:
+type: object
+items:
+type: array
+items:
+  type: object
+
+
+  // endpoints:
+
+  /order:
+    post: //new order
+    put: //edit order
+  
+  /order/id:
+    get: //get order by id
+    delete: //delete order
+
+
