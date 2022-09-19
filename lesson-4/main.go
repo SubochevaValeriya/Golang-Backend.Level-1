@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 )
 
@@ -33,11 +35,9 @@ func main() {
 	uploadHandler := &UploadHandler{
 		UploadDir: UploadDir,
 	}
-	//dirToServe := http.Dir(uploadHandler.UploadDir)
+
 	fs := &http.Server{
-		Addr: ":8000",
-		//Handler:      http.FileServer(dirToServe),
-		//Handler:      http.FileServer(dirToServe),
+		Addr:         ":8000",
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
@@ -48,7 +48,6 @@ func main() {
 }
 
 func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("kk")
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Unable to read file", http.StatusBadRequest)
@@ -60,15 +59,31 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unable to read file", http.StatusBadRequest)
 		return
 	}
+
 	filePath := h.UploadDir + "/" + header.Filename
+	isFileInDirectory := true
+
+	ext := filepath.Ext(header.Filename)
+	fileWithoutExt := header.Filename[:len(header.Filename)-len(ext)]
+
+	// Checking for the presence of a file on the server
+
+	for i := 1; isFileInDirectory == true; i++ {
+		if _, err = os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
+			isFileInDirectory = false
+		} else {
+			filePath = h.UploadDir + "/" + fileWithoutExt + "_" + strconv.Itoa(i) + ext
+		}
+	}
+
 	err = os.WriteFile(filePath, data, 0777)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Unable to save file", http.StatusInternalServerError)
 		return
 	}
-	fileLink := h.HostAddr + "/" + header.Filename
-	fmt.Fprintln(w, fileLink)
+
+	fmt.Fprintln(w, filePath)
 }
 
 func files(w http.ResponseWriter, r *http.Request) {
@@ -83,12 +98,22 @@ func files(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				http.Error(w, "Unable to receive fileInfo", http.StatusBadRequest)
 			}
-			currentFile := File{Name: d.Name(), Extension: filepath.Ext(d.Name()), Size: fileInfo.Size()}
-			fileList = append(fileList, currentFile)
+
+			if requiredExt == "" || requiredExt == filepath.Ext(d.Name()) {
+				currentFile := File{Name: d.Name(), Extension: filepath.Ext(d.Name()), Size: fileInfo.Size()}
+				fileList = append(fileList, currentFile)
+			}
 			return nil
 		})
 
-		fileList = fileList[1:] // not including parent directory
+		if len(fileList) == 0 {
+			fmt.Fprintln(w, "No content on this request", http.StatusNoContent) // if nothing found
+			return
+		}
+
+		if requiredExt == "" {
+			fileList = fileList[1:] // not including parent directory
+		}
 
 		// marshal to JSON
 		jsonList, err := json.Marshal(fileList)
